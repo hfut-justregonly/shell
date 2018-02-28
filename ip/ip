@@ -1,0 +1,41 @@
+apt install ipset
+ipset create ipchina hash:net
+##del ipchina
+cp ipchina.txt ipchinadel.txt
+sed -i 's/add/del/g' ipchinadel.txt
+
+sed -i "/^#/d" ipchina.txt
+sed -i 's/^/add ipchina &/g' ipchina.txt
+sed -i "1icreate ipchina hash:net family inet hashsize 1024 maxelem 65536" ipchina.txt
+ipset restore -f ipchina.txt
+
+port=90; iptables -I INPUT -p tcp --dport $portnum -m set ! --match-set ipchina src -j DROP
+
+get_ip() {
+    [ -z ${myip} ] && myip=$( wget -qO- -t1 -T2 ipv4.icanhazip.com )
+    [ -z ${myip} ] && myip=$( wget -qO- -t1 -T2 whatismyip.akamai.com )
+    [ ! -z ${myip} ] && echo ${myip} || echo
+}
+
+
+myip='curl -sS whatismyip.akamai.com'
+read -t 50 -p "请输入一个端口号(默认是80)：" port
+port=${port:-80}
+
+curl -l -A "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36" -H "Content-Type:application/x-www-form-urlencoded" -d "ipVersion=4&countryCode%5B%5D=CN&format=cidr&btnDownload=Download" "http://www.ip2location.com/free/visitor-blocker"
+curl -l -A "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36" -H "Content-Type:application/x-www-form-urlencoded" -d "ipVersion=4&countryCode%5B%5D=CN&format=cidr&btnDownload=Download" http://www.ip2location.com/free/visitor-blocker >ipchina.txt
+sed -i "/^#/d" ipchina.txt
+sed -i 's/^/add ipchina &/g' ipchina.txt
+apt install ipset
+ipset create ipchina hash:net
+ipset restore -f ipchina.txt
+iptables -I INPUT -p tcp --dport $portnum -m set ! --match-set ipchina src -j DROP
+iptables -I INPUT -s 127.0.0.1/32 -j ACCEPT
+iptables -I INPUT -s 10.0.0.0/8 -j ACCEPT
+iptables -I INPUT -s 192.168.0.0/16 -j ACCEPT
+iptables -I INPUT -s $myip -j ACCEPT
+iptables-save > /root/iptables.rules 
+
+
+
+
